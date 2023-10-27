@@ -1,0 +1,1365 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "### Post-Migration Tasks for Azure\r\n\r\nAfter successfully migrating to Azure, there are several essential tasks that users need to be aware of and act upon. These tasks are critical to ensure the security, resilience, and optimal performance of your migrated resources.\r\n\r\nAmong the pivotal tasks to be undertaken post-migration include:\r\n\r\n1. **Taking Virtual Machine Backups**: It is crucial to set up backups for your virtual machines in Azure to protect your data against unforeseen events.\r\n2. **Setting up BCDR (Business Continuity and Disaster Recovery)**: This ensures that your applications remain available during planned and unplanned outages and that you can recover to a pre-defined state if necessary.\r\n3. **Implementing Monitoring**: By setting up monitoring in Azure, you can track performance, identify issues, and ensure optimal operation of your resources.\r\n4. **Configuring Defender for Cloud**: This provides an added layer of security against threats, ensuring that your resources in Azure are shielded from potential vulnerabilities.\r\n\r\nMoreover, by utilizing this Workbook, users can gain insights into:\r\n\r\n- Virtual Machines with no Azure Site Recovery configured\r\n- Virtual Machines with no Azure Backup configured\r\n- Subscriptions with service health alerts configured\r\n\r\nIt's imperative to regularly review and act on these tasks to ensure the seamless and secure functioning of your resources in Azure.\r\n",
+        "style": "info"
+      },
+      "name": "text - 0"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "92ec90e3-50e1-488f-8546-e1f78ce9532d",
+            "version": "KqlParameterItem/1.0",
+            "name": "selectedTab",
+            "label": "Category",
+            "type": 10,
+            "isRequired": true,
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "jsonData": "[\r\n {\"value\": \"backupAndBcdr\", \"label\": \"Backup And BCDR\", \"selected\":true },\r\n {\"value\": \"extension\", \"label\": \"Extension for securyt and monitoring\"},\r\n {\"value\": \"alert\", \"label\": \"Alert settings\"}\r\n]",
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "value": "extension"
+          }
+        ],
+        "style": "formVertical",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "parameters - 7"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where type in~ ('microsoft.compute/virtualmachines') \r\n| extend resourceId=tolower(id) \r\n| join kind = leftouter ( \r\n    recoveryservicesresources\r\n    | where type == \"microsoft.azurebusinesscontinuity/unifiedprotecteditems\"\r\n    | where name contains \"AzureVirtualMachine;\"\r\n    | project resourceId = tolower(tostring(properties.dataSourceInformation.linkedResourceId)), asrItemid = id, isBackedUp = isnotempty(id)\r\n) on resourceId \r\n| extend isProtected = isnotempty(asrItemid)\r\n| project id,name,resourceGroup,location,tags, tostring(isProtected)\r\n//| summarize count() by isProtected\r\n| summarize\r\n    VMTotal=toreal(count(id)),\r\n    Protected=toreal(dcountif(id, isProtected==\"True\")),\r\n    Unprotected=toreal(dcountif(id, isProtected==\"False\"))\r\n| project pctNotBackedUp=toint((Unprotected/VMTotal)*100), pctBackedUp=toint((Protected/VMTotal)*100), VMTotal, Protected, Unprotected",
+              "size": 4,
+              "title": "Virtual Machines with no Azure Site Recovery configured",
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "pctNotBackedUp",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "pctBackedUp",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "min": 0,
+                      "max": 100,
+                      "palette": "redGreen",
+                      "customColumnWidthSetting": "20.2857ch"
+                    },
+                    "numberFormat": {
+                      "unit": 1,
+                      "options": {
+                        "style": "decimal"
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "VMTotal",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "1",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "customColumnWidthSetting": "13.8571ch"
+                    }
+                  },
+                  {
+                    "columnMatch": "Protected",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "customColumnWidthSetting": "18.5714ch"
+                    }
+                  },
+                  {
+                    "columnMatch": "Unprotected",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "3",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "customColumnWidthSetting": "20.2857ch"
+                    }
+                  }
+                ],
+                "rowLimit": 2000,
+                "labelSettings": [
+                  {
+                    "columnId": "pctBackedUp",
+                    "label": "% of Unprotected"
+                  },
+                  {
+                    "columnId": "VMTotal",
+                    "label": "VM Total"
+                  },
+                  {
+                    "columnId": "Protected",
+                    "label": "Protected VMs"
+                  },
+                  {
+                    "columnId": "Unprotected",
+                    "label": "Unprotected VMs"
+                  }
+                ]
+              },
+              "graphSettings": {
+                "type": 0
+              }
+            },
+            "customWidth": "50",
+            "name": "asrscorestep",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where type in~ ('microsoft.compute/virtualmachines') \r\n| extend resourceId=tolower(id) \r\n| join kind = leftouter (\r\n    recoveryservicesresources\r\n    | where type == \"microsoft.recoveryservices/vaults/backupfabrics/protectioncontainers/protecteditems\"\r\n    | where properties.backupManagementType == \"AzureIaasVM\"\r\n    | project resourceId = tolower(tostring(properties.sourceResourceId)), backupItemid = id, isBackedUp = isnotempty(id)\r\n) on resourceId \r\n| extend isProtected = isnotempty(backupItemid)\r\n| project id,name,resourceGroup,location,tags, tostring(isProtected)\r\n//| summarize count() by isProtected\r\n| summarize\r\n    VMTotal=toreal(count(id)),\r\n    Protected=toreal(dcountif(id, isProtected==\"True\")),\r\n    Unprotected=toreal(dcountif(id, isProtected==\"False\"))\r\n| project pctNotBackedUp=toint((Unprotected/VMTotal)*100), pctBackedUp=toint((Protected/VMTotal)*100), VMTotal, Protected, Unprotected",
+              "size": 4,
+              "title": "Virtual Machines with no Azure Backup configured",
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "pctNotBackedUp",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "pctBackedUp",
+                    "formatter": 4,
+                    "formatOptions": {
+                      "min": 0,
+                      "max": 100,
+                      "palette": "redGreen",
+                      "customColumnWidthSetting": "21.2857ch"
+                    },
+                    "numberFormat": {
+                      "unit": 1,
+                      "options": {
+                        "style": "decimal"
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "VMTotal",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "1",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "customColumnWidthSetting": "12.7143ch"
+                    }
+                  },
+                  {
+                    "columnMatch": "Protected",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "customColumnWidthSetting": "18.1429ch"
+                    }
+                  },
+                  {
+                    "columnMatch": "Unprotected",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "3",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "customColumnWidthSetting": "21.1429ch"
+                    }
+                  }
+                ],
+                "rowLimit": 2000,
+                "labelSettings": [
+                  {
+                    "columnId": "pctBackedUp",
+                    "label": "% of Unprotected"
+                  },
+                  {
+                    "columnId": "VMTotal",
+                    "label": "VM Total"
+                  },
+                  {
+                    "columnId": "Protected",
+                    "label": "Protected VMs"
+                  },
+                  {
+                    "columnId": "Unprotected",
+                    "label": "Unprotected VMs"
+                  }
+                ]
+              },
+              "graphSettings": {
+                "type": 0
+              }
+            },
+            "customWidth": "50",
+            "name": "backupscorestep",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where type == \"microsoft.compute/virtualmachines\"\r\n| extend resourceId = tolower(tostring(id))\r\n| join kind=leftouter  (\r\n    recoveryservicesresources\r\n    | where type == \"microsoft.azurebusinesscontinuity/unifiedprotecteditems\"\r\n    | where name contains \"AzureVirtualMachine;\"\r\n    | extend vmId = tolower(tostring(properties.dataSourceInformation.linkedResourceId))\r\n) on $left.resourceId == $right.vmId\r\n| where vmId != \"\"\r\n| project subscriptionId, resourceGroup, id, name, location",
+              "size": 0,
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "$gen_group",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": null,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "subscriptionId",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "resourceGroup",
+                    "formatter": 14,
+                    "formatOptions": {
+                      "linkColumn": "resourceGroup",
+                      "linkTarget": "Resource",
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "id",
+                    "formatter": 13,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": false,
+                      "showIcon": true,
+                      "bladeOpenContext": {
+                        "bladeName": "test",
+                        "extensionName": "siteRecoverySetting",
+                        "bladeParameters": []
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "name",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "location",
+                    "formatter": 17
+                  }
+                ],
+                "rowLimit": 2000,
+                "filter": true,
+                "hierarchySettings": {
+                  "treeType": 1,
+                  "groupBy": [
+                    "subscriptionId"
+                  ],
+                  "expandTopLevel": false
+                },
+                "labelSettings": [
+                  {
+                    "columnId": "resourceGroup",
+                    "label": "Resource Group"
+                  },
+                  {
+                    "columnId": "id",
+                    "label": "Virtual Machine"
+                  },
+                  {
+                    "columnId": "location",
+                    "label": "Location"
+                  }
+                ]
+              }
+            },
+            "customWidth": "50",
+            "name": "Virtual Machines with no Azure Site Recovery configured",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| where type == \"microsoft.compute/virtualmachines\"\r\n| extend resourceId = tolower(tostring(id))\r\n| join kind=leftouter  (\r\n    recoveryservicesresources\r\n    | where type == \"microsoft.recoveryservices/vaults/backupfabrics/protectioncontainers/protecteditems\"\r\n    | where properties.backupManagementType == \"AzureIaasVM\"\r\n    | extend vmId = tolower(tostring(properties.sourceResourceId))\r\n) on $left.resourceId == $right.vmId\r\n| where vmId != \"\"\r\n| project subscriptionId, resourceGroup, id, name, location",
+              "size": 0,
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "$gen_group",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": null,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "subscriptionId",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "resourceGroup",
+                    "formatter": 14,
+                    "formatOptions": {
+                      "linkColumn": "resourceGroup",
+                      "linkTarget": "Resource",
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "id",
+                    "formatter": 13,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "linkIsContextBlade": false,
+                      "showIcon": true,
+                      "bladeOpenContext": {
+                        "bladeName": "test",
+                        "extensionName": "siteRecoverySetting",
+                        "bladeParameters": []
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "name",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "location",
+                    "formatter": 17
+                  }
+                ],
+                "rowLimit": 2000,
+                "filter": true,
+                "hierarchySettings": {
+                  "treeType": 1,
+                  "groupBy": [
+                    "subscriptionId"
+                  ],
+                  "expandTopLevel": false
+                },
+                "labelSettings": [
+                  {
+                    "columnId": "resourceGroup",
+                    "label": "Resource Group"
+                  },
+                  {
+                    "columnId": "id",
+                    "label": "Virtual Machine"
+                  },
+                  {
+                    "columnId": "location",
+                    "label": "Location"
+                  }
+                ]
+              }
+            },
+            "customWidth": "50",
+            "name": "Virtual Machines with no Azure Backup configured",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "{\"version\":\"1.0.0\",\"content\":\"[\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Review Azure compliance offerings for ASR.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://azure.microsoft.com/en-au/resources/microsoft-azure-compliance-offerings/#:~:text=Azure%20compliance%20offerings%20are%20based%20on%20various%20types,self-assessments%2C%20and%20customer%20guidance%20documents%20produced%20by%20Microsoft\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Create alerts for Create or Delete Vault.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/azure-monitor/alerts/alerts-activity-log?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review all ASR protected items against business requirements.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Inventoried\\\",\\r\\n    \\\"priority\\\": \\\"Low\\\",\\r\\n    \\\"task\\\": \\\"Maintain an ASR inventory using log queries.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-the-logs---examples\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Configure ASR to send logs to a log analytics workspace.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#configure-site-recovery-to-send-logs\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Configure Microsoft monitoring agent on the Process Server to send churn and upload rate logs.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#configure-microsoft-monitoring-agent-on-the-process-server-to-send-churn-and-upload-rate-logs\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Review DR summary information.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-disaster-recovery-summary-azure-to-azure\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Maintain recovery plans.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/recovery-plan-overview\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Set up an alert if the last successful test failover for VMs are more than 90 days ago.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#test-failover-for-multiple-machines-exceeds-90-days\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Investigate churn patterns on VMs with Iotop and IoStat.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitoring-high-churn\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review data change rate churn and upload rate.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-site-recovery-jobs\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review ASR Jobs.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-site-recovery-jobs\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review RPO time for Azure to Azure Site Recovery protected entities.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-rpo-time\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review what's new in ASR.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/site-recovery-whats-new\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review ASR feature updates.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://azure.microsoft.com/en-us/updates/?query=site%20recovery\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Learn | ASR.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CS\\\",\\r\\n    \\\"responsible\\\": \\\"All teams\\\",\\r\\n    \\\"consulted\\\": \\\"\\\",\\r\\n    \\\"informed\\\": \\\"\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/learn/browse/?products=azure&terms=site%20recovery&expanded=azure\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Low\\\",\\r\\n    \\\"task\\\": \\\"Automation | ASR ARM templates.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CAU\\\",\\r\\n    \\\"consulted\\\": \\\"CO, CS, CA\\\",\\r\\n    \\\"informed\\\": \\\"\\\\t\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/asr-arm-templates\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Perform 540 degree DR flow test.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-site-recovery-jobs\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Performant\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Monitor process server health.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/vmware-physical-azure-monitor-process-server\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Performant\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review configuration and process server sizing.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/site-recovery-plan-capacity-vmware#capacity-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Performant\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review configuration and process server sizing.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/site-recovery-plan-capacity-vmware#capacity-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Set up an alert if a Site Recovery job e.g. the Reprotect job fails for any Site Recovery scenario, during the last day.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#site-recovery-job-fails\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Create log alert for replication health in a warning or critical state.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-replication-health\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Investigate replication health.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-replication-health\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Secured\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Define ASR RBAC roles with associated AAD groups.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/site-recovery-role-based-linked-access-control\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Updateable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Enable automatic updates for the mobility service.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/azure-to-azure-autoupdate\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Updateable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review the latest Site Recovery service update information.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/service-updates-how-to\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Updateable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review the latest update rollup version.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/site-recovery-whats-new\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Updateable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Create ASR maintenance alert.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/service-health/service-health-overview\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Site Recovery\\\",\\r\\n    \\\"tags\\\": \\\"Updateable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review mobility service versions.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CG\\\",\\r\\n    \\\"responsible\\\": \\\"CP\\\",\\r\\n    \\\"consulted\\\": \\\"CA, CO, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/en-us/azure/site-recovery/monitor-log-analytics#query-mobility-service-version\\\"\\r\\n  }\\r\\n]\\r\\n\",\"transformers\":null}",
+              "size": 0,
+              "title": "Tasks of Azure Site Recovery for BCDR",
+              "showExportToExcel": true,
+              "queryType": 8,
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "category",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "technology",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "tags",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Compliant",
+                          "representation": "Sev0",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Secured",
+                          "representation": "Sev0",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Cost Managed",
+                          "representation": "Sev2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Performant",
+                          "representation": "Sev4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Reliable",
+                          "representation": "Sev3",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Updateable",
+                          "representation": "Sev3",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Recoverable",
+                          "representation": "Sev3",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Observable",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Inventoried",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Operational Excellence",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "more",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "compositeBarSettings": {
+                        "labelText": "",
+                        "columnSettings": []
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "priority",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "High",
+                          "representation": "Sev0",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Medium",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Low",
+                          "representation": "Sev2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "task",
+                    "formatter": 0,
+                    "formatOptions": {
+                      "customColumnWidthSetting": "140ch"
+                    }
+                  },
+                  {
+                    "columnMatch": "action",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Activity",
+                          "representation": "Person",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Alert",
+                          "representation": "Alert",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Policy",
+                          "representation": "Check",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "accountable",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "responsible",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "consulted",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "informed",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "mode",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Automated",
+                          "representation": "Code",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Manual",
+                          "representation": "Backlog",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "more",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "referenceUrl1",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "Url"
+                    }
+                  },
+                  {
+                    "columnMatch": "referenceUrl2",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "Url"
+                    }
+                  }
+                ],
+                "labelSettings": [
+                  {
+                    "columnId": "tags",
+                    "label": "Tags"
+                  },
+                  {
+                    "columnId": "priority",
+                    "label": "Priority"
+                  },
+                  {
+                    "columnId": "task",
+                    "label": "Task"
+                  },
+                  {
+                    "columnId": "action",
+                    "label": "Action"
+                  },
+                  {
+                    "columnId": "accountable",
+                    "label": "Accountable"
+                  },
+                  {
+                    "columnId": "responsible",
+                    "label": "Responsible"
+                  },
+                  {
+                    "columnId": "consulted",
+                    "label": "Consulted"
+                  },
+                  {
+                    "columnId": "informed",
+                    "label": "Informed"
+                  },
+                  {
+                    "columnId": "mode",
+                    "label": "Mode"
+                  },
+                  {
+                    "columnId": "frequency",
+                    "label": "Frequency"
+                  },
+                  {
+                    "columnId": "referenceUrl1",
+                    "label": "Url"
+                  }
+                ]
+              }
+            },
+            "showPin": true,
+            "name": "asr",
+            "styleSettings": {
+              "showBorder": true
+            }
+          },
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "{\"version\":\"1.0.0\",\"content\":\"[\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Review that Azure Backup certifications and attestations meet current business requirements.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/compliance-offerings?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Manage regulatory compliance controls for Azure Backup.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Daily\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/security-controls-policy?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Create alerts for Create or Delete Vault.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/azure-monitor/alerts/alerts-activity-log?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Create alerts for Delete Protected Items.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/azure-monitor/alerts/alerts-activity-log?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Review policy adherence for backup items.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/configure-reports?WT.mc_id=Portal-fx#policy-adherence\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Compliant\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Review Long-Term Retention (LTR) backup data meets the required business compliance rules.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/archive-tier-support?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Create alert for the Use differential or incremental backup for database workloads recommendation.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/advisor/advisor-reference-cost-recommendations?WT.mc_id=Portal-fx#recovery-services\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Allocate and forecast cloud storage consumed with Backup Explorer.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/monitor-azure-backup-with-backup-explorer?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Consider the archive tier for long-term retention to save cost.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#azure-backup-cost-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Validate the replication configuration for all vaults.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#azure-backup-cost-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Validate snapshot configurations.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#azure-backup-cost-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review backup disk exclusion candidates to reduce backup storage cost.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#azure-backup-cost-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review Azure Backup policies for cost considerations that include schedule, retention and backup type.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#azure-backup-cost-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review trends for key backup billing parameters.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/configure-reports?WT.mc_id=Portal-fx#usage\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Cost Managed\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review backup alert volume by notification channel e.g. email, SMS, etc.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-azure-monitor-alert-faq?WT.mc_id=Portal-fx#are-there-any-costs-to-use-built-in-azure-monitor-alerts-for-azure-backup-\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Inventoried\\\",\\r\\n    \\\"priority\\\": \\\"Low\\\",\\r\\n    \\\"task\\\": \\\"Inventory Azure Backups with Backup Explorer.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/monitor-azure-backup-with-backup-explorer?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Inventoried\\\",\\r\\n    \\\"priority\\\": \\\"Low\\\",\\r\\n    \\\"task\\\": \\\"Manage unmonitored resources with asset inventory.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Daily\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/defender-for-cloud/asset-inventory?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Enable diagnostics logging for Azure Backup vaults.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/azure-policy-configure-diagnostics?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Govern backup estate using Backup Center.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-center-govern-environment?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Configure emails for Azure Backup reports.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-reports-email?tabs=portal&WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Enable Azure Monitor alerts for job failure scenarios.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-azure-monitoring-built-in-monitor?tabs=recovery-services-vaults&WT.mc_id=Portal-fx#turning-on-azure-monitor-alerts-for-job-failure-scenarios\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Observable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Monitor backups with Backup Explorer.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/monitor-azure-backup-with-backup-explorer?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Auto-configure newly provisioned backup infrastructure with Azure Policy at Scale.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#auto-configure-newly-provisioned-backup-infrastructure-with-azure-policy-at-scale\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Maintain a plan to provide ransomware protection, consider Azure RBAC, MUA, soft-delete and retention configuration.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Yearly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#ransomware-protection\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review Azure Backup policy retention configuration.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#backup-policy-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review Azure Backup policy schedule configuration.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#backup-policy-considerations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review vault organisation to ensure that protected resources are grouped most efficiently.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#single-or-multiple-vaults\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Perform Cross Region Restore drills to comply with audit or compliance requirements.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Yearly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-create-rs-vault?WT.mc_id=Portal-fx#set-cross-region-restore\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Maintain backup requirements documentation.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/guidance-best-practices?WT.mc_id=Portal-fx#document-your-backup-requirements\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Review Azure Backup feature updates.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CS\\\",\\r\\n    \\\"responsible\\\": \\\"All teams\\\",\\r\\n    \\\"consulted\\\": \\\"\\\",\\r\\n    \\\"informed\\\": \\\"\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://azure.microsoft.com/en-us/updates/?query=azure%20backup\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Learn | Azure Backup.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CS\\\",\\r\\n    \\\"responsible\\\": \\\"All teams\\\",\\r\\n    \\\"consulted\\\": \\\"\\\",\\r\\n    \\\"informed\\\": \\\"\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/learn/browse/?products=azure&terms=azure%20backup&expanded=azure&WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Low\\\",\\r\\n    \\\"task\\\": \\\"Automation | Azure Backup automation for Azure VM, SQL in Azure VM, SAP HANA in Azure VM, Azure Files, Azure Blobs, Azure Disks, Azure Database for PostgreSQL and Vault-level configuration.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CAU\\\",\\r\\n    \\\"consulted\\\": \\\"CO, CS, CA\\\",\\r\\n    \\\"informed\\\": \\\"\\\\t\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-support-automation?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Operational Excellence\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Identify backup trends with Backup Explorer.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Monthly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/monitor-azure-backup-with-backup-explorer?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Performant\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Configure snapshot retention to improve backup and restore performance with the Azure Backup Instant Restore capability.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-instant-restore-capability?WT.mc_id=Portal-fx#configure-snapshot-retention\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Performant\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Manage the factors that affect restore performance for Azure VMs including storage account IOPS and ancillary read and write operations.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-azure-vms-introduction?WT.mc_id=Portal-fx#backup-performance\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Performant\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Manage Azure VMs for factors that affect backup performance including disk fragmentation, disk churn, backup versions, etc.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Ad hoc\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-azure-vms-introduction?WT.mc_id=Portal-fx#backup-performance\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Recoverable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Protect backup data from unintentional deletes with soft-delete for Azure VM, SQL server in Azure VM and SAP HANA in Azure VM.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-azure-security-feature-cloud?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Recoverable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Protect Azure file shares backups with soft-delete for Azure files shares.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/soft-delete-azure-file-share?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Recoverable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Data redundancy | Review vault storage redundancy configuration (LRS, GRS, or RA-GRS).\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-create-rs-vault?WT.mc_id=Portal-fx#set-storage-redundancy\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Recoverable\\\",\\r\\n    \\\"priority\\\": \\\"Medium\\\",\\r\\n    \\\"task\\\": \\\"Cross Region Restore | Enable cross region restore for vaults with GRS.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-create-rs-vault?WT.mc_id=Portal-fx#set-cross-region-restore\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Audit backups and restores with Backup Explorer.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Weekly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/monitor-azure-backup-with-backup-explorer?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Create alert for the Protect your VM data from accidental deletion recommendation.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/advisor/advisor-high-availability-recommendations?WT.mc_id=Portal-fx#protect-your-virtual-machine-data-from-accidental-deletion\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Create alert for the Enable Backups on your VMs recommendation.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/advisor/advisor-reference-reliability-recommendations?WT.mc_id=Portal-fx#enable-backups-on-your-virtual-machines\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Configure notifications for alerts.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-azure-manage-windows-server?WT.mc_id=Portal-fx#configuring-notifications-for-alerts\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Reliable\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Create alert for the Enable soft delete for your Recovery Services vaults recommendation.\\\",\\r\\n    \\\"action\\\": \\\"Alert\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Automated\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/advisor/advisor-reference-reliability-recommendations?WT.mc_id=Portal-fx#enable-soft-delete-for-your-recovery-services-vaults\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Secured\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Configure vault encryption using customer-managed keys.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/encryption-at-rest-with-cmk?tabs=portal&WT.mc_id=Portal-fx#configure-a-vault-to-encrypt-using-customer-managed-keys\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Secured\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Manage Azure Backup recommendations.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Daily\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/defender-for-cloud/recommendations-reference?WT.mc_id=Portal-fx#appservices-recommendations\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Secured\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Resource Guard | Review multi-user authorization using Resource Guard for Azure Backup configuration.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Quarterly\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/multi-user-authorization?WT.mc_id=Portal-fx\\\"\\r\\n  },\\r\\n  {\\r\\n    \\\"category\\\": \\\"Service\\\",\\r\\n    \\\"technology\\\": \\\"Azure Backup\\\",\\r\\n    \\\"tags\\\": \\\"Secured\\\",\\r\\n    \\\"priority\\\": \\\"High\\\",\\r\\n    \\\"task\\\": \\\"Define Azure Backup RBAC roles with associated AAD groups including: Security admin and Backup admin.\\\",\\r\\n    \\\"action\\\": \\\"Activity\\\",\\r\\n    \\\"accountable\\\": \\\"CP\\\",\\r\\n    \\\"responsible\\\": \\\"CO\\\",\\r\\n    \\\"consulted\\\": \\\"CG, CA, CAU\\\",\\r\\n    \\\"informed\\\": \\\"CS\\\",\\r\\n    \\\"mode\\\": \\\"Manual\\\",\\r\\n    \\\"frequency\\\": \\\"Once\\\",\\r\\n    \\\"referenceUrl1\\\": \\\"https://docs.microsoft.com/azure/backup/backup-rbac-rs-vault?WT.mc_id=Portal-fx\\\"\\r\\n  }\\r\\n]\\r\\n\",\"transformers\":null}",
+              "size": 0,
+              "title": "Tasks of Azure Backup for Backup",
+              "showExportToExcel": true,
+              "queryType": 8,
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "category",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "technology",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "tags",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Compliant",
+                          "representation": "Sev0",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Secured",
+                          "representation": "Sev0",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Cost Managed",
+                          "representation": "Sev2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Performant",
+                          "representation": "Sev4",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Reliable",
+                          "representation": "Sev3",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Updateable",
+                          "representation": "Sev3",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Recoverable",
+                          "representation": "Sev3",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Observable",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Inventoried",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Operational Excellence",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "more",
+                          "text": "{0}{1}"
+                        }
+                      ],
+                      "compositeBarSettings": {
+                        "labelText": "",
+                        "columnSettings": []
+                      }
+                    }
+                  },
+                  {
+                    "columnMatch": "priority",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "High",
+                          "representation": "Sev0",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Medium",
+                          "representation": "Sev1",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Low",
+                          "representation": "Sev2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "task",
+                    "formatter": 0,
+                    "formatOptions": {
+                      "customColumnWidthSetting": "140ch"
+                    }
+                  },
+                  {
+                    "columnMatch": "action",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Activity",
+                          "representation": "Person",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Alert",
+                          "representation": "Alert",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Policy",
+                          "representation": "Check",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "accountable",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "responsible",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "consulted",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "informed",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "mode",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Automated",
+                          "representation": "Code",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "contains",
+                          "thresholdValue": "Manual",
+                          "representation": "Backlog",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "more",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "referenceUrl1",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "Url"
+                    }
+                  },
+                  {
+                    "columnMatch": "referenceUrl2",
+                    "formatter": 7,
+                    "formatOptions": {
+                      "linkTarget": "Url"
+                    }
+                  }
+                ],
+                "labelSettings": [
+                  {
+                    "columnId": "tags",
+                    "label": "Tags"
+                  },
+                  {
+                    "columnId": "priority",
+                    "label": "Priority"
+                  },
+                  {
+                    "columnId": "task",
+                    "label": "Task"
+                  },
+                  {
+                    "columnId": "action",
+                    "label": "Action"
+                  },
+                  {
+                    "columnId": "accountable",
+                    "label": "Accountable"
+                  },
+                  {
+                    "columnId": "responsible",
+                    "label": "Responsible"
+                  },
+                  {
+                    "columnId": "consulted",
+                    "label": "Consulted"
+                  },
+                  {
+                    "columnId": "informed",
+                    "label": "Informed"
+                  },
+                  {
+                    "columnId": "mode",
+                    "label": "Mode"
+                  },
+                  {
+                    "columnId": "frequency",
+                    "label": "Frequency"
+                  },
+                  {
+                    "columnId": "referenceUrl1",
+                    "label": "Url"
+                  }
+                ]
+              }
+            },
+            "showPin": true,
+            "name": "ab",
+            "styleSettings": {
+              "showBorder": true
+            }
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "backupAndBcdr"
+      },
+      "name": "backupAndBcdr"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| extend resourceType = tolower(tostring(type))\r\n| where  resourceType == \"microsoft.compute/virtualmachines\"\r\n| extend vmId = tolower(tostring(id))\r\n| join kind=leftouter (\r\n    resources\r\n    | extend resourceType = tolower(tostring(type))\r\n    | extend resourceId = tolower(tostring(id))\r\n    | where resourceType == \"microsoft.compute/virtualmachines/extensions\"\r\n    | extend extensionName = name\r\n    | extend vmId = tostring(split(resourceId, \"/extensions\")[0])\r\n    | extend provisioningState = properties.provisioningState\r\n    | extend isMDEExtensionInstalled = iff(provisioningState == \"Succeeded\" and extensionName in~ (\"MDE.Windows\", \"MDE.Linux\") and properties.publisher == \"Microsoft.Azure.AzureDefenderForServers\", 1, 0)\r\n    | extend isGuestConfigurationInstalled = iff(provisioningState == \"Succeeded\" and name in~ (\"ConfigurationforWindows\", \"ConfigurationforLinux\") and properties.publisher == \"Microsoft.GuestConfiguration\", 1, 0)\r\n    | extend isAMAInstalled = iff(provisioningState == \"Succeeded\" and name in~ (\"AzureMonitorLinuxAgent\", \"AzureMonitorWindowsAgent\") and properties.publisher == \"Microsoft.Azure.Monitor\", 1, 0)\r\n) on vmId\r\n| summarize arg_max(isMDEExtensionInstalled,isGuestConfigurationInstalled, isAMAInstalled, *) by subscriptionId, vmId, resourceGroup, location\r\n| where isMDEExtensionInstalled != 1 or isGuestConfigurationInstalled != 1 or isAMAInstalled != 1\r\n| project subscriptionId, vmId, resourceGroup, location, isMDEExtensionInstalled, isGuestConfigurationInstalled, isAMAInstalled",
+              "size": 0,
+              "title": "Virtual Machines with no extension installed",
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "$gen_group",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": "Resource",
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "subscriptionId",
+                    "formatter": 5
+                  },
+                  {
+                    "columnMatch": "resourceGroup",
+                    "formatter": 14,
+                    "formatOptions": {
+                      "linkTarget": null,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "location",
+                    "formatter": 17
+                  },
+                  {
+                    "columnMatch": "isMDEExtensionInstalled",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "!=",
+                          "thresholdValue": "1",
+                          "representation": "2",
+                          "text": "Not installed"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "Installed"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "isGuestConfigurationInstalled",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "!=",
+                          "thresholdValue": "1",
+                          "representation": "2",
+                          "text": "Not installed"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "Installed"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "isAMAInstalled",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "!=",
+                          "thresholdValue": "1",
+                          "representation": "2",
+                          "text": "Not installed"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "Installed"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rowLimit": 2000,
+                "filter": true,
+                "hierarchySettings": {
+                  "treeType": 1,
+                  "groupBy": [
+                    "subscriptionId"
+                  ]
+                },
+                "labelSettings": [
+                  {
+                    "columnId": "subscriptionId",
+                    "label": "Subscription"
+                  },
+                  {
+                    "columnId": "vmId",
+                    "label": "Virtual Machine"
+                  },
+                  {
+                    "columnId": "resourceGroup",
+                    "label": "Resource Group"
+                  },
+                  {
+                    "columnId": "location",
+                    "label": "Location"
+                  },
+                  {
+                    "columnId": "isMDEExtensionInstalled",
+                    "label": "Is MDEExtension installed"
+                  },
+                  {
+                    "columnId": "isGuestConfigurationInstalled",
+                    "label": "Is GuestConfiguration installed"
+                  },
+                  {
+                    "columnId": "isAMAInstalled",
+                    "label": "Is Azure Monitoring Agent installed"
+                  }
+                ]
+              }
+            },
+            "name": "Virtual Machines with no extension installed",
+            "styleSettings": {
+              "showBorder": true
+            }
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "extension"
+      },
+      "name": "extension"
+    },
+    {
+      "type": 12,
+      "content": {
+        "version": "NotebookGroup/1.0",
+        "groupType": "editable",
+        "items": [
+          {
+            "type": 3,
+            "content": {
+              "version": "KqlItem/1.0",
+              "query": "resources\r\n| distinct subscriptionId\r\n| join kind=leftouter(\r\n    resources\r\n    | where type =~ \"microsoft.insights/activitylogalerts\"\r\n    | mv-expand condition1 = properties.condition.allOf\r\n    | mv-expand condition2 = condition1.anyOf\r\n    | extend alertEnabled = tostring(properties.enabled)\r\n    | summarize set_condition1=make_set(condition1.equals), set_condition2=make_set(condition2.equals) by id, name,type,tenantId,resourceGroup,subscriptionId, alertEnabled\r\n    | where set_has_element(set_condition1, \"ServiceHealth\")\r\n    | extend category = \"ServiceHealth\"\r\n    | extend all = iff(set_has_element(set_condition1, \"ServiceHealth\") and array_length(set_condition2) == 0, true, false)\r\n    // Service issue\r\n    | extend incident = iff(all, true, iff(set_has_element(set_condition1, \"Incident\"), true, set_has_element(set_condition2, \"Incident\")))\r\n    // Planned maintenance\r\n    | extend maintenance = iff(all, true, iff(set_has_element(set_condition1, \"Maintenance\"), true, set_has_element(set_condition2, \"Maintenance\")))\r\n    // Health advisories\r\n    | extend informational = iff(all, true, iff(set_has_element(set_condition1, \"Informational\") or set_has_element(set_condition1, \"ActionRequired\"), true, set_has_element(set_condition2, \"Informational\") or set_has_element(set_condition2, \"ActionRequired\")))\r\n    // Security advisory\r\n    | extend security = iff(all, true, iff(set_has_element(set_condition1, \"Security\"), true, set_has_element(set_condition2, \"Security\")))\r\n    | project id, name, subscriptionId, category, tostring(alertEnabled), tostring(incident), tostring(maintenance), tostring(informational), tostring(security)\r\n    | summarize count_alertEnabled=countif(alertEnabled == \"true\"), count_incident=countif(incident == \"True\"), count_maintenance=countif(maintenance == \"True\"), count_informational=countif(informational == \"True\"), count_security=countif(security == \"True\") by subscriptionId) \r\n    on subscriptionId\r\n| project subscriptionId, alertEnabled=iff(isnotnull(count_alertEnabled), count_alertEnabled, 0), incident=iff(isnotnull(count_incident), count_incident, 0), maintenance=iff(isnotnull(count_maintenance), count_maintenance, 0), informational=iff(isnotnull(count_informational), count_informational, 0), security=iff(isnotnull(count_security), count_security, 0)\r\n| order by incident, maintenance, informational, security desc\r\n",
+              "size": 0,
+              "title": "Service Health Alert Configuration Summary by Subscription",
+              "queryType": 1,
+              "resourceType": "microsoft.resourcegraph/resources",
+              "crossComponentResources": [
+                "value::all"
+              ],
+              "gridSettings": {
+                "formatters": [
+                  {
+                    "columnMatch": "subscriptionId",
+                    "formatter": 15,
+                    "formatOptions": {
+                      "linkTarget": null,
+                      "showIcon": true
+                    }
+                  },
+                  {
+                    "columnMatch": "alertEnabled",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "incident",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "maintenance",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "informational",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "columnMatch": "security",
+                    "formatter": 18,
+                    "formatOptions": {
+                      "thresholdsOptions": "icons",
+                      "thresholdsGrid": [
+                        {
+                          "operator": "==",
+                          "thresholdValue": "0",
+                          "representation": "2",
+                          "text": "{0}{1}"
+                        },
+                        {
+                          "operator": "Default",
+                          "thresholdValue": null,
+                          "representation": "success",
+                          "text": "{0}{1}"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "labelSettings": [
+                  {
+                    "columnId": "subscriptionId",
+                    "label": "Subscription"
+                  },
+                  {
+                    "columnId": "alertEnabled",
+                    "label": "Alert Enabled"
+                  },
+                  {
+                    "columnId": "incident",
+                    "label": "Incident Issues"
+                  },
+                  {
+                    "columnId": "maintenance",
+                    "label": "Planned Maintenance"
+                  },
+                  {
+                    "columnId": "informational",
+                    "label": "Health Advisories"
+                  },
+                  {
+                    "columnId": "security",
+                    "label": "Security Advisories"
+                  }
+                ]
+              }
+            },
+            "name": "Service Health Alert Configuration Summary by Subscription",
+            "styleSettings": {
+              "showBorder": true
+            }
+          }
+        ]
+      },
+      "conditionalVisibility": {
+        "parameterName": "selectedTab",
+        "comparison": "isEqualTo",
+        "value": "alert"
+      },
+      "name": "alert"
+    }
+  ],
+  "fallbackResourceIds": [
+    "Azure Monitor"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
