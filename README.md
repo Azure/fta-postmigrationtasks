@@ -1,6 +1,6 @@
 # Post-Migration Tasks for Azure
 
-This workbook provides a comprehensive guide on essential post-migration tasks after migrating to Azure. It offers vital insights into ensuring the security, resilience, and optimal performance of your migrated resources.
+This repository provides a comprehensive guide on essential post-migration tasks after migrating to Azure. It offers vital insights into ensuring the security, resilience, and optimal performance of your migrated resources.
 
 ## Workbook
 
