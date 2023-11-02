@@ -1,14 +1,48 @@
-# Project
+# Post-Migration Tasks for Azure
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+This workbook provides a comprehensive guide on essential post-migration tasks after migrating to Azure. It offers vital insights into ensuring the security, resilience, and optimal performance of your migrated resources.
 
-As the maintainer of this project, please make a few updates:
+## Workbook
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+### Overview
+
+After a successful migration to Azure, users must undertake various critical tasks to maintain the security and performance of their resources. This workbook guides users through these tasks, ensuring that resources remain protected against unforeseen events, potential vulnerabilities, and that they operate efficiently.
+
+![image](https://github.com/Azure/fta-postmigrationtasks/assets/3822284/b9ef880e-5b85-476e-8881-a3757dcd5c11)
+
+
+### Backup And BCDR
+
+- **Virtual Machine Backups:** It is paramount to set up backups for your virtual machines to guard against unforeseen circumstances.
+- **Setting up BCDR (Business Continuity and Disaster Recovery):** Ensure that your applications remain available during planned and unplanned outages. Having a BCDR plan ensures that you can recover to a predefined state if necessary.
+
+The workbook provides:
+- Lists of virtual machines with and without Azure Site Recovery configured.
+- Lists of virtual machines with and without Azure Backup configured.
+
+![image](https://github.com/Azure/fta-postmigrationtasks/assets/3822284/cb0b8373-389f-4b1f-a909-3c1e3784e071)
+
+### Extension for security and monitoring
+
+Extensions in your Virtual Machine are crucial for ensuring compliance, security, and effective monitoring. This section of the workbook verifies the presence of vital extensions in your VMs:
+- **MDE Extension:** Microsoft Defender for Endpoint is essential for real-time protection against threats and integrates advanced threat detection capabilities into VMs.
+- **GuestConfiguration Extension:** Ensures VM compliance with corporate Azure policies.
+- **Azure Monitoring Agent:** Provides critical performance metrics and event logs for VMs, essential for observing and understanding the VM's operational health.
+
+![image](https://github.com/Azure/fta-postmigrationtasks/assets/3822284/dd261c20-0dcc-42b9-bfbc-5362b04a13c4)
+
+### Alert settings
+
+To ensure timely responses and proactiveness in managing potential issues, the workbook provides an overview of alert configurations for each Azure subscription. It covers:
+- Active alerts for specific subscriptions.
+- Incident-related alerts notifying users of potential disruptions or anomalies.
+- Scheduled maintenance alerts to prepare users for potential operational interruptions.
+- Health advisories offering guidance on best practices and optimizations for Azure resources.
+- Security advisories informing users about potential vulnerabilities and enhancing Azure resources' security posture.
+
+By regularly reviewing and acting upon these tasks, users can ensure the seamless and secure functioning of their Azure resources.
+
+![image](https://github.com/Azure/fta-postmigrationtasks/assets/3822284/014321a5-819d-49eb-afb9-e31ceaa303e5)
 
 ## Contributing
 
