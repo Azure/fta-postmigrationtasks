@@ -25,11 +25,10 @@
               "additionalResourceOptions": [],
               "showDefault": false
             },
-            "jsonData": "[\r\n {\"value\": \"backupAndBcdr\", \"label\": \"Backup And BCDR\", \"selected\":true },\r\n {\"value\": \"extension\", \"label\": \"Extension for securyt and monitoring\"},\r\n {\"value\": \"alert\", \"label\": \"Alert settings\"}\r\n]",
+            "jsonData": "[\r\n {\"value\": \"backupAndBcdr\", \"label\": \"Backup and BCDR\", \"selected\":true },\r\n {\"value\": \"extension\", \"label\": \"Extension for security and monitoring\"},\r\n {\"value\": \"alert\", \"label\": \"Alert settings\"}\r\n]",
             "timeContext": {
               "durationMs": 86400000
-            },
-            "value": "extension"
+            }
           }
         ],
         "style": "formVertical",
@@ -69,7 +68,7 @@
                       "min": 0,
                       "max": 100,
                       "palette": "redGreen",
-                      "customColumnWidthSetting": "20.2857ch"
+                      "customColumnWidthSetting": "26.8571ch"
                     },
                     "numberFormat": {
                       "unit": 1,
@@ -123,7 +122,7 @@
                           "text": "{0}{1}"
                         }
                       ],
-                      "customColumnWidthSetting": "20.2857ch"
+                      "customColumnWidthSetting": "20.8571ch"
                     }
                   }
                 ],
@@ -204,7 +203,7 @@
                           "text": "{0}{1}"
                         }
                       ],
-                      "customColumnWidthSetting": "12.7143ch"
+                      "customColumnWidthSetting": "16.1429ch"
                     }
                   },
                   {
@@ -220,7 +219,7 @@
                           "text": "{0}{1}"
                         }
                       ],
-                      "customColumnWidthSetting": "18.1429ch"
+                      "customColumnWidthSetting": "20.4286ch"
                     }
                   },
                   {
@@ -338,6 +337,10 @@
                 },
                 "labelSettings": [
                   {
+                    "columnId": "subscriptionId",
+                    "label": "Subscription ID"
+                  },
+                  {
                     "columnId": "resourceGroup",
                     "label": "Resource Group"
                   },
@@ -426,6 +429,10 @@
                 },
                 "labelSettings": [
                   {
+                    "columnId": "subscriptionId",
+                    "label": "Subscription ID"
+                  },
+                  {
                     "columnId": "resourceGroup",
                     "label": "Resource Group"
                   },
@@ -445,6 +452,14 @@
             "styleSettings": {
               "showBorder": true
             }
+          },
+          {
+            "type": 1,
+            "content": {
+              "json": "## Tasks of BCDR and Backup\r\n\r\nThis part provides a detailed list of tasks associated with Azure Site Recovery (for Business Continuity and Disaster Recovery, BCDR) and Azure Backup.\r\n\r\nThe tasks are categorized based on their operational tags such as \"Operational Excellence\" and \"Compliant\". Each task has been prioritized as High, Medium, or Low.<br>\r\nIn addition to the tasks themselves, the list offers insights into the type of action required (e.g., Activity or Alert), the mode of operation (Manual or Automated), and the frequency with which the tasks should be conducted.\r\n\r\nThis structured approach ensures that all essential tasks for maintaining robust BCDR and Backup strategies are accounted for and managed effectively.",
+              "style": "info"
+            },
+            "name": "テキスト - 6"
           },
           {
             "type": 3,
@@ -1026,6 +1041,14 @@
         "groupType": "editable",
         "items": [
           {
+            "type": 1,
+            "content": {
+              "json": "## Check for extensions installed in the Virtual Machine\r\n\r\nThis section of the Workbook is designed to verify the presence of various extensions that may be installed on your Virtual Machines. Ensuring these extensions are installed and active is crucial for maintaining security, compliance, and effective monitoring within your Azure infrastructure.\r\n\r\n#### MDE Extension\r\n\r\nThe **Microsoft Defender for Endpoint (MDE) Extension** is crucial for securing virtual machines in Azure. This extension provides real-time protection and threat detection, integrating advanced threat protection capabilities into your Virtual Machines. It also automates security remediation actions. Checking for the MDE extension is essential for sustaining the security standards of your cloud infrastructure.\r\n\r\n- [Protect your servers with Defender for Cloud's integrated EDR solution: Microsoft Defender for Endpoint](https://learn.microsoft.com/en-us/azure/defender-for-cloud/integration-defender-for-endpoint)\r\n\r\n#### GuestConfiguration extension\r\n\r\nThe **GuestConfiguration extension** is imperative for ensuring that your Virtual Machines comply with your corporate and Azure policies. It audits, enforces, and reports on the configurations of your Virtual Machines, reflecting their compliance status back to Azure. Verifying the presence of this extension is key to maintaining governance and policy adherence across your Virtual Machines estate.\r\n\r\n- [Understand the machine configuration feature of Azure Automanage](https://learn.microsoft.com/en-us/azure/governance/machine-configuration/overview)\r\n\r\n#### Azure Monitoring Agent\r\n\r\nThe **Azure Monitoring Agent** extension is tailored to collect essential monitoring data specifically from the guest operating system of Virtual Machines. This data includes critical performance metrics and event logs that are fundamental for observing and understanding the health and performance of the Virtual Machine. Ensuring this agent is installed on your Virtual Machines is vital for robust monitoring and maintaining operational health.\r\n\r\n- [Azure Monitor Agent overview](https://learn.microsoft.com/en-us/azure/azure-monitor/agents/agents-overview)\r\n",
+              "style": "info"
+            },
+            "name": "テキスト - 1"
+          },
+          {
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
@@ -1187,6 +1210,14 @@
         "version": "NotebookGroup/1.0",
         "groupType": "editable",
         "items": [
+          {
+            "type": 1,
+            "content": {
+              "json": "## Check for alert configuration\r\n\r\nThis section of the Workbook provides an overview of the alert configurations for each Azure subscription. With this Workbook, users can quickly ascertain the status and settings of various alerts pertaining to their Azure resources, ensuring timely response and proactiveness in managing potential issues.\r\n\r\n- [Create activity log alerts on service notifications using the Azure portal](https://learn.microsoft.com/en-us/azure/service-health/alerts-activity-log-service-notifications-portal)\r\n\r\n### Alert Enabled\r\n\r\nThis column indicates the total number of alerts that have been enabled for a specific subscription. An active alert configuration is essential to be promptly notified of any irregularities or issues that may arise within the associated Azure resources.\r\n\r\n### Incident Issues\r\n\r\nThis section provides insights into the number of alerts set up to notify users of any incident issues related to their Azure resources in a particular subscription. Incident issues can range from service disruptions to other operational anomalies that may affect the performance or availability of resources.\r\n\r\n### Planned Maintenance\r\n\r\nUnder the \"Planned Maintenance\" column, users can view the number of alerts configured to notify them about scheduled maintenance events. Being informed about planned maintenance allows users to prepare and minimize potential disruptions to their operations.\r\n\r\n### Health Advisories\r\n\r\nThe \"Health Advisories\" section displays the number of alerts set to inform users about the health and performance recommendations for their Azure resources. These advisories can offer guidance on best practices and optimizations to ensure the optimal functioning of resources.\r\n\r\n### Security Advisors\r\n\r\nIn the \"Security Advisors\" column, users can see the number of alerts designed to inform them about security-related advisories. These advisories can encompass a range of topics from potential vulnerabilities to recommendations for enhancing the security posture of Azure resources.\r\n\r\n",
+              "style": "info"
+            },
+            "name": "テキスト - 1"
+          },
           {
             "type": 3,
             "content": {
