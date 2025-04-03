@@ -1,3 +1,7 @@
+# Important
+
+With the disbanding of the FastTrack for Azure program, this repository is being moved to an archive state and will no longer be maintained.
+
 # Post-Migration Tasks for Azure
 
 This repository provides a comprehensive guide on essential post-migration tasks after migrating to Azure. It offers vital insights into ensuring the security, resilience, and optimal performance of your migrated resources.
